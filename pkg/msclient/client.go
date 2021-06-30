@@ -66,8 +66,13 @@ func (e *ResponseParseError) Unwrap() error {
 	return e.Cause
 }
 
-func (c *Client) get(uri string, resp interface{}) error {
-	reqUrl := c.cfg.BaseURL + uri
+func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
+	urlEncodedArgs := make([]interface{}, len(args))
+	for i, v := range args {
+		urlEncodedArgs[i] = url.QueryEscape(fmt.Sprintf("%v", v))
+	}
+
+	reqUrl := c.cfg.BaseURL + fmt.Sprintf(uri, urlEncodedArgs...)
 	httpResp, err := c.httpClient.Get(reqUrl)
 	if err != nil {
 		return err
