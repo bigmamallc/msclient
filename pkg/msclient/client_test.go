@@ -12,7 +12,7 @@ func TestClientSimple(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, err := New(MustEnvCfg("TEST_"), zerolog.Nop(), prometheus.NewRegistry())
+	c, err := New(MustEnvCfg("TEST_"), zerolog.Nop(), prometheus.NewRegistry(), "test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -21,11 +21,11 @@ type Client struct {
 
 var RedirectedError = errors.New("got a redirect")
 
-func New(cfg *Cfg, log zerolog.Logger, mxReg *prometheus.Registry) (c *Client, err error) {
+func New(cfg *Cfg, log zerolog.Logger, mxReg *prometheus.Registry, mxSubsystem string) (c *Client, err error) {
 	c = &Client{
 		cfg: cfg,
 		log: log,
-		mx:  newMetrics(mxReg),
+		mx:  newMetrics(mxReg, mxSubsystem),
 	}
 
 	c.httpClient = &http.Client{
@@ -67,6 +67,11 @@ func (e *ResponseParseError) Unwrap() error {
 }
 
 func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
+	mxLabels := map[string]string{labelURI: uri, labelMethod: "GET"}
+	c.mx.requests.With(mxLabels)
+
+	timer := prometheus.NewTimer(c.mx.successfulResponseTimes.With(mxLabels))
+
 	urlEncodedArgs := make([]interface{}, len(args))
 	for i, v := range args {
 		urlEncodedArgs[i] = url.QueryEscape(fmt.Sprintf("%v", v))
@@ -75,11 +80,13 @@ func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
 	reqUrl := c.cfg.BaseURL + fmt.Sprintf(uri, urlEncodedArgs...)
 	httpResp, err := c.httpClient.Get(reqUrl)
 	if err != nil {
+		c.mx.requestErrors.With(mxLabels).Inc()
 		return err
 	}
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode != http.StatusOK {
+		c.mx.statusCodeErrors.With(mxLabels).Inc()
 		return &url.Error{
 			Op:  "GET",
 			URL: reqUrl,
@@ -92,6 +99,7 @@ func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
 
 	data, err := ioutil.ReadAll(httpResp.Body)
 	if err != nil {
+		c.mx.responseReadErrors.With(mxLabels).Inc()
 		return &url.Error{
 			Op:  "GET",
 			URL: reqUrl,
@@ -100,6 +108,7 @@ func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
 	}
 
 	if err := json.Unmarshal(data, resp); err != nil {
+		c.mx.responseParseErrors.With(mxLabels).Inc()
 		return &url.Error{
 			Op: "GET",
 			URL: reqUrl,
@@ -107,5 +116,7 @@ func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
 		}
 	}
 
+	timer.ObserveDuration()
+	c.mx.successfulResponses.With(mxLabels).Inc()
 	return nil
 }
