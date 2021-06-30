@@ -66,7 +66,7 @@ func (e *ResponseParseError) Unwrap() error {
 	return e.Cause
 }
 
-func (c *Client) get(uri string, resp interface{}, args... interface{}) error {
+func (c *Client) Get(uri string, resp interface{}, args... interface{}) error {
 	mxLabels := map[string]string{labelURI: uri, labelMethod: "GET"}
 	c.mx.requests.With(mxLabels)
 

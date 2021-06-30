@@ -21,7 +21,7 @@ func TestClientSimple(t *testing.T) {
 		IP string `json:"ip"`
 	}{}
 
-	if err = c.get("/?format=%s", resp, "json"); err != nil {
+	if err = c.Get("/?format=%s", resp, "json"); err != nil {
 		t.Fatal(err)
 	}
 
