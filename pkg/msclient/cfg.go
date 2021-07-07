@@ -9,6 +9,9 @@ type Cfg struct {
 	BaseURL        string        `env:"BASE_URL" required:"true"`
 	RequestTimeout time.Duration `env:"REQUEST_TIMEOUT" default:"5s"`
 	MaxRetries     int           `env:"MAX_RETRIES" default:"3"`
+
+	BasicAuthUsername string `env:"BASIC_AUTH_USERNAME" default:""`
+	BasicAuthPassword string `env:"BASIC_AUTH_PASSWORD" default:""`
 }
 
 func EnvCfg(envPrefix string) (*Cfg, error) {

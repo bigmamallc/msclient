@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
+	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ type Client struct {
 	mx  *metrics
 
 	httpClient *http.Client
+	restyClient *resty.Client
 }
 
 var RedirectedError = errors.New("got a redirect")
@@ -33,6 +35,14 @@ func New(cfg *Cfg, log zerolog.Logger, mxReg *prometheus.Registry, mxSubsystem s
 			return RedirectedError
 		},
 		Timeout: cfg.RequestTimeout,
+	}
+
+	c.restyClient = resty.New().SetRESTMode().SetTimeout(cfg.RequestTimeout).
+		SetHostURL(c.cfg.BaseURL)
+
+	if cfg.BasicAuthUsername != "" {
+		log.Info().Str("baseURL", cfg.BaseURL).Msg("will use basic auth for service URL")
+		c.restyClient.SetBasicAuth(cfg.BasicAuthUsername, cfg.BasicAuthPassword)
 	}
 
 	return
@@ -119,4 +129,8 @@ func (c *Client) Get(uri string, resp interface{}, args... interface{}) error {
 	timer.ObserveDuration()
 	c.mx.successfulResponses.With(mxLabels).Inc()
 	return nil
+}
+
+func (c *Client) NewRequest() *resty.Request {
+	return c.restyClient.NewRequest()
 }
